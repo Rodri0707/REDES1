@@ -1,0 +1,29 @@
+AUTORES:
+- Rodrigo Díaz-Regañón Ureña
+- Daniel Martínez Fernández
+
+COMENTARIOS AL PROFESOR:
+La práctica se ha desarrollado y validado en el entorno de la máquina virtual. Se ha puesto especial atención en unificar todo el procesamiento en un único flujo principal tal y como exigía el enunciado, realizando las comprobaciones necesarias dentro de la función procesa_paquete.
+
+ARCHIVOS ENTREGADOS ADICIONALES:
+- practica1captura.png: Captura de pantalla solicitada en el enunciado donde se visualiza la ejecución de nuestro programa en la terminal (imprimiendo los primeros N>32 bytes en hexadecimal) junto a la ventana de Wireshark para demostrar que los bytes capturados coinciden exactamente.
+
+CRITERIOS DE EVALUACIÓN:
+
+- Normativa de entrega cumplida en su totalidad: Realizado: Varias relecturas del enunciado, revisión del formato de empaquetado del archivo zip y confirmación de que no hay espacios en el nombre del fichero.
+
+- Contar paquetes de una traza: Realizado: Se ha ejecutado el programa con el argumento --file y se ha comprobado que el número final impreso por consola coincide exactamente con el conteo de paquetes al abrir la misma traza en Wireshark.
+
+- Contar paquetes de la interfaz de red: Realizado: Se ha ejecutado la captura en vivo con --itf, se ha generado tráfico y al detener con Control-C, el contador global registra y muestra correctamente el número de paquetes procesados.
+
+- Uso de un único "flujo" para traza e interfaz: Realizado: El código fuente demuestra que existe un único pcap_loop y una única función procesa_paquete, distinguiendo el origen del tráfico únicamente en la apertura inicial de descriptores.
+
+- Almacenar correctamente el tráfico capturado en vivo en una traza: Realizado: Se ha verificado que al ejecutar con --itf se generan los archivos .pcap en disco. Estos archivos se han abierto posteriormente en Wireshark confirmando que no están corruptos y contienen paquetes.
+
+- Separar correctamente el trafico capturado en dos trazas: Realizado: Tras una captura en vivo, se han abierto ambas trazas generadas en Wireshark. Se ha comprobado que 'capturaNOIP...' contiene exclusivamente paquetes cuyo protocolo en cabecera Ethernet es 0x0806, mientras que el archivo 'captura...' contiene el resto de protocolos.
+
+- Gestionar correctamente el numero de paquetes a leer: Realizado: Se ha probado a ejecutar el programa incluyendo el argumento --npkts 20. El programa se detiene de forma automática y limpia exactamente al procesar el paquete número 20.
+
+- Calcular tiempo entre último y primer paquete: Realizado: Se ha comprobado que el programa almacena el timestamp del primer paquete y lo resta correctamente con el del último procesado, mostrando un valor en segundos (con precisión de microsegundos) que concuerda con las marcas temporales relativas de Wireshark.
+
+- Imprimir los N primeros bytes de un paquete (pruebe para N>32) y validarlo con Wireshark: Realizado: Se ha ejecutado el programa con --nbytes 40. Los resultados en hexadecimal (en líneas de 16 bytes) se han cotejado visualmente con el volcado hexadecimal del panel inferior de Wireshark, comprobando que son idénticos. Esto se adjunta y demuestra en el archivo practica1captura.png.
