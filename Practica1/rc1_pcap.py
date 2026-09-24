@@ -201,6 +201,8 @@ def pcap_loop(handle:pcap_t, cnt:int, callback_fun: Callable[[ctypes.c_void_p,pc
     global user_callback
     if handle is None:
         raise ValueError("El objeto handle no puede ser None")
+
+    
    
     user_callback = callback_fun
     #  typedef void (*pcap_handler)(u_char *user, const struct pcap_pkthdr *h,const u_char *bytes);
