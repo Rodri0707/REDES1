@@ -1,0 +1,25 @@
+Resumen de funciones de la biblioteca RC1-Libpcap
+
+Apertura de orígenes de datos:
+
+pcap_open_offline: Abre un archivo de traza .pcap guardado previamente para su lectura, devolviendo un descriptor.
+
+pcap_open_live: Abre una interfaz de red (como ens33) para capturar tráfico en vivo. Permite configurar el tamaño máximo de captura (snaplen), el modo promiscuo y el tiempo de espera, requiriendo permisos de superusuario.
+
+Lectura y procesamiento:
+
+pcap_loop: Extrae paquetes del descriptor abierto (en vivo o de archivo) en un bucle. Ejecuta una función de atención (callback) por cada paquete capturado, pasándole la cabecera (con los tiempos y longitudes) y los datos puros, hasta alcanzar el límite indicado.
+
+Almacenamiento de tráfico en archivos:
+
+pcap_open_dead: Crea un descriptor lógico o "plantilla" que define las características de la captura que se va a guardar, como el tipo de enlace (ej. DLT_EN10MB para Ethernet) y el tamaño máximo del paquete.
+
+pcap_dump_open: Utiliza el descriptor creado en el paso anterior para generar físicamente un archivo .pcap en el disco duro, devolviendo un objeto dumper.
+
+pcap_dump: Vuelca físicamente la información de un paquete capturado (su cabecera y sus datos) dentro del archivo .pcap asociado al dumper.
+
+Inyección y limpieza:
+
+pcap_inject: Permite enviar o inyectar una trama de datos (en formato bytearray) directamente a la red a través de un descriptor de interfaz abierto en vivo.
+
+pcap_close y pcap_dump_close: Cierran los descriptores de captura principales y los archivos de guardado (dumpers) respectivamente para liberar los recursos al finalizar el programa.

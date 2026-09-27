@@ -1,0 +1,19 @@
+EJERCICIO TUTORIAL:
+Ej 2
+1.⁠ ⁠Copie el filtro realizado. 
+ip and frame.len > 1000
+
+2.⁠ ⁠¿Cómo almacenaría en una captura solo los paquetes mostrados?
+La Pregunta 2 te plantea cómo guardarías en un archivo solo los paquetes que estás viendo ahora mismo filtrados. La respuesta es que debes ir al menú Archivo > Exportar paquetes especificados... (Export Specified Packets...) y, en la ventana que se abre, marcar la casilla que indica guardar únicamente los paquetes Mostrados (Displayed).
+
+3.⁠ ⁠Compare el tamaño del primer paquete IP, y el campo 'length' del protolo IP del mismo. Repita para los primeros 5 paquetes, ¿qué relación encuentra?
+Frame: 1514 bytes on wire
+Internet Protocol Version 4: total length: 1500
+Siempre hay una difernecia de 14 bytes
+La relación es que el tamaño físico de la trama (Frame) siempre suma los 14 bytes de la cabecera Ethernet que "envuelve" al paquete IP. Si revisas el esquema de la cabecera Ethernet en el documento, comprobarás que se compone exactamente de esos 14 bytes: Dirección de Destino (6 bytes) + Dirección de Origen (6 bytes) + Tipo Ethernet (2 bytes).
+
+5. 
+Para tu memoria (el Word), simplemente describe que fuiste a las opciones de captura, introdujiste udp en el campo "Capture Filter", iniciaste la captura, generaste tráfico web y con hping3, y comprobaste que Wireshark ignoró todo el tráfico TCP, registrando únicamente el UDP.
+
+Linea carpeta compartida: sudo vmhgfs-fuse .host:/ /mnt/hgfs/ -o allow_other -o uid=1000
+
