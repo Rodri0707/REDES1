@@ -10,8 +10,6 @@ ARCHIVOS ENTREGADOS ADICIONALES:
 
 CRITERIOS DE EVALUACIÓN:
 
-- Normativa de entrega cumplida en su totalidad: Realizado: Varias relecturas del enunciado, revisión del formato de empaquetado del archivo zip y confirmación de que no hay espacios en el nombre del fichero.
-
 - Contar paquetes de una traza: Realizado: Se ha ejecutado el programa con el argumento --file y se ha comprobado que el número final impreso por consola coincide exactamente con el conteo de paquetes al abrir la misma traza en Wireshark.
 
 - Contar paquetes de la interfaz de red: Realizado: Se ha ejecutado la captura en vivo con --itf, se ha generado tráfico y al detener con Control-C, el contador global registra y muestra correctamente el número de paquetes procesados.

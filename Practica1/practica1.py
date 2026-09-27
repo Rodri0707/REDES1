@@ -23,13 +23,14 @@ TO_MS = 10
 num_paquete = 0
 TIME_OFFSET = 30*60
 MAX_BYTES = 65535
- 
+
+# Handler para la señal ctrl+c
 def signal_handler(nsignal,frame):
 	logging.info('Control C pulsado')
 	if handle:
 		pcap_breakloop(handle)
 		
-
+#Función llamada por pcap_loop() para procesar cada paquete capturado
 def procesa_paquete(us,header,data):
 	global num_paquete, pdumper_ip, pdumper_noip, tiempo_primer_paquete, tiempo_ultimo_paquete
 
@@ -39,6 +40,7 @@ def procesa_paquete(us,header,data):
 		tiempo_primer_paquete = tiempo_actual
 	tiempo_ultimo_paquete = tiempo_actual
 
+	# Mensjae de información para cada paquete capturado
 	logging.info('Nuevo paquete de {} bytes capturado en el timestamp UNIX {}.{}'.format(header.len,header.ts.tv_sec,header.ts.tv_sec))
 	num_paquete += 1
 
@@ -52,7 +54,7 @@ def procesa_paquete(us,header,data):
 			print()
 	print() # Salto de línea de cierre para separar este paquete del siguiente
 			
-		
+	# Fragmento que trata el guardado de los paquetes en su correspondiente traza
 	if args.interface:
 		if len(data) >= 14:
 			# Extraemos y comparamos los bytes 12 y 13
@@ -69,8 +71,10 @@ def procesa_paquete(us,header,data):
 	
 if __name__ == "__main__":
 	global args,handle, dumper_mac
+	#parser que gestiona los argumentos de entrada
 	parser = argparse.ArgumentParser(description='Captura tráfico de una interfaz ( o lee de fichero) y muestra la longitud y timestamp de los 50 primeros paquetes',
 	formatter_class=RawTextHelpFormatter)
+	# Argumentos de entrada
 	parser.add_argument('--file', dest='tracefile', default=False,help='Fichero pcap a abrir')
 	parser.add_argument('--itf', dest='interface', default=False,help='Interfaz a abrir')
 	parser.add_argument('--nbytes', dest='nbytes', type=int, default=MAX_BYTES,help='Número de bytes a mostrar por paquete')
@@ -84,12 +88,13 @@ if __name__ == "__main__":
 		sys.exit(-1)
 	#Le pasamos a args los argumentos de parser
 	args = parser.parse_args()
-
+	# Tratamos cada uno de los argumentos de entrada
 	if args.debug:
 		logging.basicConfig(level = logging.DEBUG, format = '[%(asctime)s %(levelname)s]\t%(message)s')
 	else:
 		logging.basicConfig(level = logging.INFO, format = '[%(asctime)s %(levelname)s]\t%(message)s')
 
+	# Al menos hay que especificar una interfaz o un fichero de traza 
 	if args.tracefile is False and args.interface is False:
 		logging.error('No se ha especificado interfaz ni fichero')
 		parser.print_help()
@@ -97,6 +102,7 @@ if __name__ == "__main__":
 
 	signal.signal(signal.SIGINT, signal_handler)
 
+	# Variables necesarias para la captura y volcado en live
 	errbuf = bytearray()
 	handle = None
 	pdumper_ip = None 
@@ -106,6 +112,7 @@ if __name__ == "__main__":
 	if args.interface: 
 		# Si el usuario ha introducido --itf, abrimos la interfaz en vivo
 		logging.info(f"Abriendo la interfaz {args.interface}...")
+		# Aqui se abre la interfaz en modo no promiscuo, con un tamaño máximo de trama Ethernet y un timeout de 10 ms	
 		handle = pcap_open_live(args.interface,ETH_FRAME_MAX,NO_PROMISC,TO_MS, errbuf)
 		if handle is None:
 			logging.error(f"Error al abrir la interfaz: {errbuf.decode('ascii', errors='ignore')}")
@@ -133,7 +140,7 @@ if __name__ == "__main__":
 			logging.error(f"Error al abrir la traza: {errbuf.decode('ascii', errors='ignore')}")
 			sys.exit(-1)
 
-	
+	# Aquí se llama a pcap_loop() para capturar y procesar los paquetes
 	ret = pcap_loop(handle,args.npackets,procesa_paquete,None)
 	if ret == -1:
 		logging.error('Error al capturar un paquete')
@@ -148,6 +155,7 @@ if __name__ == "__main__":
 	else :
 		logging.info('Tiempo entre primer y último paquete: 0 segundos')
 
+	# Liberamos los recursos abiertos (trazas y manejadores)
 	if pdumper_noip is not None:
 		pcap_dump_close(pdumper_noip)
 	if pdumper_ip is not None:
