@@ -166,5 +166,12 @@ if __name__ == "__main__":
 		pcap_close(handle)
 
 
-
+#icmp 	ping -c 4 www.uam.es          -c 4 = manda 4 y para. Sin -c no para nunca (Ctrl+C).
+#ARP 	sudo arping -I ens33 -c 2 <gateway>
+#udp    ping -c 3 www.uam.es   
+# #tcp    curl www.uam.es   
+# #port 53   nslookup www.uam.es   
+# #tcp port 80    curl -v [http://www.uam.es](http://www.uam.es)   
+# #host <IP>    trafico de/hacia esa ip  ping -c 3 <IP>   
+# #not arp     navegamos con firefox
 	

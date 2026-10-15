@@ -1,0 +1,138 @@
+Chuleta: generar tráﬁco para cada
+ﬁltro de captura
+Regla de oro: el ﬁltro de captura decide QUÉ se guarda. El comando
+de terminal decide QUÉ tráﬁco se genera. Necesitas los dos a la vez:
+Wireshark capturando con el ﬁltro puesto, y otra terminal lanzando el
+comando.
+0. Antes de nada (cada vez que enciendas
+la VM)
+sudo mkdir -p /mnt/hgfs
+sudo vmhgfs-fuse .host:/ /mnt/hgfs -o allow_other
+ls /mnt/hgfs
+Teclea a mano. Cuidado con los dos puntos de .host:/ y con los
+espacios.
+Para cerrar la VM: VM > Power > Suspend Guest. Nunca el
+botón rojo.
+0bis. Sacar tu gateway (NO memorices
+IPs, cambian en cada máquina)
+ip route
+Busca la línea default via X.X.X.X. Esa X.X.X.X es <gateway> en todos
+los comandos de abajo.
+1. Tabla rápida: ﬁltro de captura →
+comando que lo genera
+Filtro de captura
+Qué captura
+Comando en otra
+terminal
+icmpPingsping -c 4 www.uam.es
+arpPeticiones/respuestas
+ARPsudo arping -I ens33
+-c 2 <gateway>
+udpTodo UDP (DNS,
+NTP…)nslookup www.uam.es
+port 53DNSnslookup www.uam.es o
+dig www.uam.es
+tcpTodo TCPcurl -v
+http://www.uam.es
+port 80Tráﬁco al puerto 80curl -v
+http://www.uam.es
+tcp port 80TCP en el puerto 80curl -v
+http://www.uam.es
+tcp port 443HTTPScurl
+https://www.uam.es
+host <IP>Tráﬁco de/hacia esa
+IPping -c 3 <IP>
+not arpTodo menos ARPNavegar con Firefox
+icmp6ICMPv6 (Router
+Solicitation…)sudo rdisc6 ens33
+(ver nota abajo)2. Detalle por tipo de tráﬁco
+ICMP (pings)
+ping -c 4 www.uam.es
+-c 4 = manda 4 y para. Sin -c no para nunca (Ctrl+C).
+ARP
+sudo arping -I ens33 -c 2 <gateway>
+Necesita sudo y -I ens33 (sin -I intenta usar una interfaz que no
+existe en Linux).
+Alternativa sin instalar nada: ping -c 2 <IP de tu subred que no
+hayas usado>. Al no conocer su MAC, tu máquina manda un ARP
+antes del ping.
+DNS (puerto 53, UDP)
+nslookup www.uam.es
+dig www.uam.es
+Salen 4 paquetes: pregunta A + respuesta, pregunta AAAA +
+respuesta.
+TCP en general / puerto 80
+curl -v http://www.uam.es
+Usa http:// (no https) para que vaya al puerto 80 y no al 443.
+TCP con hping3 (SYN a mano)
+sudo hping3 -S -p 80 -c 3 www.uam.es
+-S = ﬂag SYN, -p 80 = puerto, -c 3 = solo 3 paquetes. Verás el patrón:
+SYN, SYN-ACK, RST.
+HTTPS (puerto 443)
+curl https://www.uam.es
+En Wireshark verás TCP y TLSv1.x (TLS viaja dentro de TCP).
+Tráﬁco hacia una IP concreta
+ping -c 3 <IP>
+con ﬁltro de captura host <IP>.
+NTP (puerto 123, UDP)
+No hace falta comando: la VM lo genera sola cada cierto tiempo. Filtro
+de captura: port 123 (espera un rato).
+ICMPv6 / Router Solicitation
+sudo rdisc6 ens33Si no está instalado: sudo apt install ndisc6. Este paquete no lo he
+podido comprobar en tu VM, así que mira si existe con which rdisc6.
+En tus primeras capturas ya apareció un Router Solicitation solo, sin
+generarlo tú.
+3. Cómo comprobar en Wireshark que el
+ﬁltro funcionó
+1. Título de la ventana: debe decir Capturando desde ens33
+(el_filtro).
+2. Columna Protocol: solo aparecen protocolos que encajan con el
+ﬁltro.
+3. Panel del medio: abre la capa de transporte y mira los puertos.
+4. Filtro de visualización en negativo (debe dar 0 paquetes si todo
+fue bien):
+Filtro de captura
+usado
+Comprobación (barra de
+visualización)
+port 53!(udp.port == 53) && !(tcp.port == 53)
+tcp port 80!(tcp.port == 80)
+icmp!icmp
+arp!arp
+udp!udp
+tcp!tcp
+4. Sintaxis: no mezclar los dos tipos de
+ﬁltro
+Filtro de captura
+Dónde
+Estilo
+Opciones de captura
+(engranaje), campo
+“Filtro de captura”
+Texto plano en
+minúsculas: tcp port
+80, not arp, host
+1.2.3.4
+Error típico
+ICMP en mayúsculas
+da “syntax error”
+Filtro de
+visualización
+Barra de arriba
+Con puntos y
+operadores: tcp.port
+== 80 && ip.addr ==
+1.2.3.4
+Confundirlo con el de
+captura
+Puertos: tcp.port = origen o destino, tcp.srcport = solo origen,
+tcp.dstport = solo destino. Usa udp. para DNS/NTP y tcp. para web.
+5. Errores típicos que ya te han pasado
+pyhton3 en vez de python3.
+Falta el espacio entre practica1.py y --file.
+ping -c 192.168... sin el número después de -c (ping -c 3 <IP>).
+Dos comandos pegados en una línea. Para encadenarlos usa && o
+dale Enter a cada uno.
+arping sin sudo o sin -I ens33.
+Filtro de captura en mayúsculas.
+Botón rojo de VMware: apaga la VM y pierdes el montaje de hgfs.
