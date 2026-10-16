@@ -246,8 +246,8 @@ def sendEthernetFrame(data:bytes,length:int,etherType:int,dstMac:bytes) -> int:
         return -1
 
     # Inyectamos la trama
-ret = pcap_inject(handle, bytes(trama), len(trama))
-if ret == -1:
-    logging.error("Error al inyectar la trama")
-    return -1
-return 0
+    ret = pcap_inject(handle, bytes(trama), len(trama))
+    if ret == -1:
+        logging.error("Error al inyectar la trama")
+        return -1
+    return 0
