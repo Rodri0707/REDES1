@@ -24,7 +24,7 @@ def printHelp():
 	print ( "\ta <direccionIP> : Solicita ARP Request sobre la IP indicada\n")
 	print ( "\tp : Imprime cache ARP\n")
 	print ( "\th : Muestra la ayuda\n")
-	#TODO g : ARP gratuito
+	print ( "\tg : Envia un ARP gratuito para comprobar si la IP propia ya está asignada\n")
 	print ( "\tq : Salir del programa\n")
 
 
@@ -52,7 +52,10 @@ if __name__ == "__main__":
 	if (startEthernetLevel(args.interface) != 0):
 		logging.error('Ethernet no inicializado')
 		sys.exit(-1)
-	# TODO iniciar nivel EthMsg
+	
+	#iniciar nivel EthMsg
+	initEthMsg(args.interface)
+
 	#Inicializamos ARP. Si no podemos inicializar salimos.
 	if initARP(args.interface) == -1:
 		logging.error('ARP no inicializado')
@@ -100,7 +103,14 @@ if __name__ == "__main__":
 				print(f"Enviando mensaje de {len(mensaje)} Bytes: {mensaje}")
 				# Aquí puedes llamar a una función que maneje el envío de mensajes
 				sendEthMsg(mensaje)
-			#TODO ARP gratuito
+
+			elif comando == 'g':
+				print("Ejecutando ARP Gratuito...")
+				# Usamos la función getIP (importada de arp.py) para saber nuestra IP
+				mi_ip = getIP(args.interface)
+				# Llamamos a la resolución ARP preguntando por nosotros mismos
+				ARPResolution(mi_ip)
+			
 			else:
 				print("Comando no reconocido. 'h' para ayuda.\n")
 		except KeyboardInterrupt:
