@@ -5,6 +5,8 @@
     2024 EPS-UAM
 '''
 
+from email.mime import message
+
 from ethernet import *
 import logging
 import socket
@@ -13,8 +15,9 @@ import fcntl
 import time
 from threading import Lock
 from expiringdict import ExpiringDict
+from datetime import datetime
 
-ETHTYPE = 0x3003
+ETHTYPE = 0x0AA0
 #Dirección de difusión (Broadcast)
 broadcast = bytes([0xFF]*6)
 
@@ -37,8 +40,25 @@ def process_ethMsg_frame(us:ctypes.c_void_p,header:pcap_pkthdr,data:bytes,srcMac
             -srcMac: MAC origen de la trama Ethernet que se ha recibido
         Retorno: Ninguno
     '''
-    logging.debug('EthMsg: Función no implementada')
-    #TODO implementar aquí
+    longitud_mensaje = struct.unpack('!H', data[0:2])[0]
+        
+    # 2. Extraemos el mensaje real
+    mensaje_texto = data[2:2+longitud_mensaje].decode('ascii', errors='ignore')
+
+     # 3. Formateamos la dirección MAC (conviertiendo cada byte a HEX con dos dígitos)
+    mac_formateada = ':'.join(['{:02X}'.format(b) for b in srcMac])
+
+    # 4. Construimos la fecha y hora a partir del timestamp de la cabecera
+    # El timestamp viene en header.ts.tv_sec (segundos UNIX) y tv_usec (microsegundos)
+    timestamp_float = header.ts.tv_sec + (header.ts.tv_usec / 1000000.0)
+    # Convertimos ese float a un objeto datetime
+    dt_object = datetime.fromtimestamp(timestamp_float)
+    # Formateamos la fecha con la estructura pedida: [aaaa/mm/dd hh:mm:ss.uuuuuu]
+    fecha_formateada = dt_object.strftime("%Y/%m/%d %H:%M:%S.%f")
+    
+    # 5. Imprimimos por pantalla con el formato exacto del enunciado
+    print(f"[{fecha_formateada}] {mac_formateada} ({longitud_mensaje} bytes): {mensaje_texto}")    
+
 
 
 
@@ -50,8 +70,8 @@ def initEthMsg(interface:str) -> int:
         Argumentos:   
 			interfaz
     '''
-    logging.debug('EthMsg: Función no implementada')
-    #TODO implementar aquí
+    registerEthCallback(process_ethMsg_frame, ETHTYPE)
+    logging.info(f'Nivel EthMsg inicializado en la interfaz {interface}')
     return 0
 
 def sendEthMsg(message:bytes) -> bytes:
@@ -71,6 +91,22 @@ def sendEthMsg(message:bytes) -> bytes:
                 
           
     '''
-    logging.debug('EthMsg: Función no implementada')
-    #TODO implementar aquí
-    return None
+    global broadcast # Nos aseguramos de usar la variable global
+    
+    # 1. Convertimos el string a bytes (usando ASCII como pide el enunciado)
+    message_bytes = message.encode('ascii', errors='ignore')
+    
+    # 2. Codificamos la longitud de los BYTES en 2 bytes en orden de red (!H)
+    longitud_bytes = struct.pack('!H', len(message_bytes))
+    
+    # 3. Concatenamos para formar el payload completo
+    data = longitud_bytes + message_bytes
+    
+    # 4. Enviamos la trama. Usamos 0x0AA0 para cumplir el enunciado del PDF.
+    # El tamaño total del payload es la longitud del mensaje en bytes + los 2 bytes de la cabecera.
+    retorno = sendEthernetFrame(data, len(message_bytes) + 2, ETHTYPE, broadcast)
+    
+    if retorno == 0:
+        return len(data)
+    else:
+        return None
