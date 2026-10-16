@@ -74,39 +74,35 @@ def initEthMsg(interface:str) -> int:
     logging.info(f'Nivel EthMsg inicializado en la interfaz {interface}')
     return 0
 
-def sendEthMsg(message:bytes) -> bytes:
-    '''
-        Nombre: sendEthMsg
-        Descripción: Esta función mandara un mensaje en broacast 
-            
-            Esta función debe realizar, al menos, las siguientes tareas:
-                - Crear una trama Ehernet con el mensaje remitido. Los datos de la trama tienen que incluir la longitud del mensaje en orden de red, seguido del mensaje.
-                - Enviar un mensaje en broadcast. La llamada a Ethernet debe tener en cuenta la longitud total (longitud+mensaje)
-		Argumentos:
-			message: datos con el mensaje a remitir.
-                
-        Retorno: 
-			Numero de Bytes transmitidos en el mensaje.
-			None en caso de que no haya podido emitir el mensaje
-                
-          
-    '''
-    global broadcast # Nos aseguramos de usar la variable global
-    
-    # 1. Convertimos el string a bytes (usando ASCII como pide el enunciado)
+def sendEthMsg(message:str, dstMac:bytes) -> int:
+
     message_bytes = message.encode('ascii', errors='ignore')
-    
-    # 2. Codificamos la longitud de los BYTES en 2 bytes en orden de red (!H)
     longitud_bytes = struct.pack('!H', len(message_bytes))
-    
-    # 3. Concatenamos para formar el payload completo
     data = longitud_bytes + message_bytes
     
-    # 4. Enviamos la trama. Usamos 0x0AA0 para cumplir el enunciado del PDF.
-    # El tamaño total del payload es la longitud del mensaje en bytes + los 2 bytes de la cabecera.
-    retorno = sendEthernetFrame(data, len(message_bytes) + 2, ETHTYPE, broadcast)
+    # Cambiamos 'broadcast' por 'dstMac'
+    retorno = sendEthernetFrame(data, len(message_bytes) + 2, ETHTYPE, dstMac)
     
     if retorno == 0:
         return len(data)
     else:
         return None
+        
+    # Añadimos dstMac como argumento
+    '''
+    def sendEthMsg(message:str, dstMac:bytes) -> int:
+
+    (Comentarios)
+    message_bytes = message.encode('ascii', errors='ignore')
+    longitud_bytes = struct.pack('!H', len(message_bytes))
+    data = longitud_bytes + message_bytes
+    
+    # Cambiamos 'broadcast' por 'dstMac'
+    retorno = sendEthernetFrame(data, len(message_bytes) + 2, ETHTYPE, dstMac)
+    
+    if retorno == 0:
+        return len(data)
+    else:
+        return None
+    
+    '''

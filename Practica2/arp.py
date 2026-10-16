@@ -256,10 +256,12 @@ def initARP(interface:str) -> int:
     # Llamamos a ARPResolution preguntando por NUESTRA PROPIA IP
     # Como es un ARP gratuito, se espera que devuelva None (nadie la tiene)
     mac_resuelta = ARPResolution(myIP)
-    
+
     if mac_resuelta is not None:
         logging.error("ARP Gratuito fallido: La IP ya está asignada a otra máquina en la red")
         return -1
+
+    logging.info(f"Nivel ARP inicializado correctamente en {interface} con IP {myIP}")
         
     # 4. Marcar la variable de nivel ARP inicializado a True
     arpInitialized = True

@@ -99,10 +99,31 @@ if __name__ == "__main__":
 			
 			elif comando.startswith("m "):
 				partes = comando.split(" ")
-				mensaje = " ".join(partes[1:]) # vuelve a generar el mensaje tras quitar la m
-				print(f"Enviando mensaje de {len(mensaje)} Bytes: {mensaje}")
-				# Aquí puedes llamar a una función que maneje el envío de mensajes
-				sendEthMsg(mensaje)
+				if len(partes) < 3:
+					print("Formato incorrecto. Uso: m <IP> <mensaje>\n")
+					continue
+					
+				ipstr = partes[1]
+				mensaje = " ".join(partes[2:])
+				
+
+				# 1. Convertimos la IP escrita a entero
+				ip = struct.unpack('!I',socket.inet_aton(ipstr))[0]
+					
+				print(f"Buscando a {ipstr} en la red...")
+					
+				# 2. Llamamos a TU función ARP para descubrir su MAC física
+				mac_destino = ARPResolution(ip)
+					
+				# 3. Si la encontramos, enviamos el mensaje directo (Unicast)
+				if mac_destino is not None:
+					mac_str = ':'.join(['{:02X}'.format(b) for b in mac_destino])
+					print(f"MAC encontrada ({mac_str}). Enviando mensaje de {len(mensaje)} Bytes: {mensaje}")
+						
+					# Llamamos al envío pasándole el mensaje Y la MAC destino
+					sendEthMsg(mensaje, mac_destino)
+				else:
+					print(f"Error: El equipo con IP {ipstr} no existe o no contesta.\n")
 
 			elif comando == 'g':
 				print("Ejecutando ARP Gratuito...")
@@ -125,4 +146,33 @@ if __name__ == "__main__":
 		sys.exit(-1)
 
 
-	
+	'''
+	elif comando.startswith("m "):
+				partes = comando.split(" ")
+				if len(partes) < 3:
+					print("Formato incorrecto. Uso: m <IP> <mensaje>\n")
+					continue
+					
+				ipstr = partes[1]
+				mensaje = " ".join(partes[2:])
+				
+
+				# 1. Convertimos la IP escrita a entero
+				ip = struct.unpack('!I',socket.inet_aton(ipstr))[0]
+					
+				print(f"Buscando a {ipstr} en la red...")
+					
+				# 2. Llamamos a TU función ARP para descubrir su MAC física
+				mac_destino = ARPResolution(ip)
+					
+				# 3. Si la encontramos, enviamos el mensaje directo (Unicast)
+				if mac_destino is not None:
+					mac_str = ':'.join(['{:02X}'.format(b) for b in mac_destino])
+					print(f"MAC encontrada ({mac_str}). Enviando mensaje de {len(mensaje)} Bytes: {mensaje}")
+						
+					# Llamamos al envío pasándole el mensaje Y la MAC destino
+					sendEthMsg(mensaje, mac_destino)
+				else:
+					print(f"Error: El equipo con IP {ipstr} no existe o no contesta.\n")
+
+	'''
