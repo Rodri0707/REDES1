@@ -216,16 +216,14 @@ def initIP(interface,opts=None):
             -opts: array de bytes con las opciones a nivel IP a incluir en los datagramas o None si no hay opciones a añadir
         Retorno: True o False en función de si se ha inicializado el nivel o no
     '''
-    # Inicializar el nivel ARP
     if initARP(interface) == -1:
         return False
-
+    
     myIP = getIP(interface)
     MTU = getMTU(interface)
     netmask = getNetmask(interface)
     defaultGW = getDefaultGW(interface)
 
-    # Almacenar opciones IP (deben ser múltiplo de 4 bytes y máximo 40 bytes)
     if opts is not None:
         if len(opts) > 40:
             logging.error("Opciones IP superan los 40 bytes máximos.")
@@ -242,7 +240,6 @@ def initIP(interface,opts=None):
     IPID = 12
 
     return True
-
 
 def sendIPDatagram(dstIP,data,protocol):
     global IPID
@@ -267,9 +264,84 @@ def sendIPDatagram(dstIP,data,protocol):
             -protocol: valor numérico del campo IP protocolo que indica el protocolo de nivel superior de los datos
             contenidos en el payload. Por ejemplo 1, 6 o 17.
         Retorno: True o False en función de si se ha enviado el datagrama correctamente o no
-          
+        
     '''
-    ip_header = bytes()
+
+    if (dstIP & netmask) == (myIP & netmask):
+    # Está en nuestra misma subred
+        dstMac = ARPResolution(dstIP)
+    else:
+        # Está fuera de nuestra subred, lo mandamos al router (gateway)
+        dstMac = ARPResolution(defaultGW)
+
+    if dstMac is None:
+        return False
+
+    #Aqui cojo el IHL (tamaño de la cabecera)
+    if ipOpts is not None:
+        longitud_cabecera_bytes = 20 + len(ipOpts)
+    else:
+        longitud_cabecera_bytes = 20
+
+    ihl = longitud_cabecera_bytes // 4
+
+    max_datos = MTU - longitud_cabecera_bytes
+    max = max_datos - (max_datos % 8)  # Ajustar a múltiplo de 8
+
+    if len(data) == 0:
+        num_fragmentos = 1
+    else:
+        num_fragmentos = len(data) // max
+        if len(data) % max != 0:
+            num_fragmentos += 1
+
+    for i in range(num_fragmentos):
+        # Recortar el trozo de datos de este fragmento
+        inicio = i * max
+        fin = min(inicio + max, len(data))
+        datos_fragmento = data[inicio:fin]
+
+        # Calcular Total Length, bandera MF y Offset
+        total_length = longitud_cabecera_bytes + len(datos_fragmento)
+        if(i < num_fragmentos - 1):
+            mf = 1
+        else:
+            mf = 0
+
+        offset = inicio // 8
+        flags_y_offset = (mf << 13) | offset
+        #No inicializo df ni reserved, porque están a 0
+
+        # Empaquetar los 20 bytes fijos de cabecera (con checksum = 0 inicialmente)
+        # Versión 4 en los 4 bits altos, IHL en los 4 bits bajos
+        ver_ihl = (4 << 4) | ihl
+        ip_header = struct.pack('!BBHHHBBHII',
+                                ver_ihl,       # Version + IHL (1 byte)
+                                1,             # TOS = 1 según enunciado (1 byte)
+                                total_length,  # Total Length (2 bytes)
+                                IPID,          # Identification (2 bytes)
+                                flags_y_offset,# Flags + Fragment Offset (2 bytes)
+                                40,            # TTL = 40 según enunciado (1 byte)
+                                protocol,      # Protocolo superior: 17 UDP, 1 ICMP (1 byte)
+                                0,             # Checksum provisional a 0 (2 bytes)
+                                myIP,          # IP origen (4 bytes)
+                                dstIP)         # IP destino (4 bytes)
+
+        # Añadir opciones si existen
+        if ipOpts is not None:
+            ip_header += ipOpts
+
+        # Calcular el checksum real y meterlo en los bytes 10 y 11
+        # ¡OJO! chksum() ya devuelve el valor en orden de red, por eso struct.pack va sin !
+        chk = chksum(ip_header)
+        ip_header = ip_header[:10] + struct.pack('H', chk) + ip_header[12:]
+
+        # 6. Unir cabecera + datos y enviar por Ethernet (Ethertype 0x0800)
+        datagrama_final = ip_header + datos_fragmento
+        if sendEthernetFrame(datagrama_final, len(datagrama_final), 0x0800, dstMac) != 0:
+            return False
+    IPID = (IPID + 1) & 0xFFFF #Hacer el AND no es necesario, pero así nos aseguramos de que el contador se resetea cuando se superan los 4 bytes
+    return True
 
 
 
