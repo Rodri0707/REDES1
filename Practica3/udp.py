@@ -47,10 +47,15 @@ def process_UDP_datagram(us,header,data,srcIP):
         Retorno: Ninguno
           
     '''
+    srcPort, dstPort, length, checksum = struct.unpack('!HHHH', data[0:8])
+    payload = data[8:]
 
+    logging.debug(f'Puerto origen: {srcPort}')
+    logging.debug(f'Puerto destino: {dstPort}')
+    logging.debug(f'Datos UDP: {payload}')
 
 def sendUDPDatagram(data,dstPort,dstIP):
-     '''
+    '''
         Nombre: sendUDPDatagram
         Descripción: Esta función construye un datagrama UDP y lo envía
         Esta función debe realizar, al menos, las siguientes tareas:
@@ -65,10 +70,15 @@ def sendUDPDatagram(data,dstPort,dstIP):
             -dstPort: entero de 16 bits que indica el número de puerto destino a usar
             -dstIP: entero de 32 bits con la IP destino del datagrama UDP
         Retorno: True o False en función de si se ha enviado el datagrama correctamente o no
-          
+        
     '''
-    udp_datagram = bytes()
-
+    cab_udp=[] 
+    cab_udp[0:2] = struct.pack('!H',getUDPSourcePort())
+    cab_udp[2:4] = struct.pack('!H',dstPort)
+    cab_udp[4:6] = struct.pack('!H', len(data)+8)
+    cab_udp[6:8] = struct.pack('!H', 0)
+    udp_datagram = bytes(cab_udp) + data
+    return sendIPDatagram(dstIP, udp_datagram, UDP_PROTO)
 
 def initUDP():
     '''
@@ -82,3 +92,4 @@ def initUDP():
         Retorno: Ninguno
           
     '''
+    registerIPProtocol(process_UDP_datagram, UDP_PROTO)
