@@ -1,0 +1,9 @@
+sudo mkdir -p /mnt/hgfs
+sudo vmhgfs-fuse .host:/ /mnt/hgfs/ -o allow_other -o uid=1000
+
+Abre la terminal normal.Escribe el comando: sudo mn --nat  
+xterm h1 h2
+sudo python3 practica2.py --itf h1-eth0   para el h1
+sudo python3 practica2.py --itf h2-eth0   para el h2
+
+ifconfig h2-eth0 10.0.0.1 ------> para cambiar la ip de h2 a 10.0.0.1

@@ -1,0 +1,161 @@
+==============================================================
+ PRÁCTICA 2 - Ethernet y ARP
+==============================================================
+
+AUTORES
+-------
+  - Rodrigo Díaz-Regañón Ureña
+  - Daniel Martínez Fernández
+
+ARCHIVOS ENTREGADOS
+-------------------
+  practica2.py   Programa principal (lectura de comandos por teclado).
+  ethernet.py    Nivel Ethernet: inicio/parada, envío y recepción de tramas,
+                 registro de callbacks por Ethertype.
+  ethmsg.py      Protocolo de mensajes sobre Ethernet (Ethertype 0x0AA0).
+  arp.py         Protocolo ARP: peticiones, respuestas, caché y ARP gratuito.
+  rc1_pcap.py    Librería de acceso a pcap (proporcionada, sin modificar).
+  leeme.txt      Este archivo.
+
+
+COMANDOS DEL PROGRAMA
+---------------------
+  a <direccionIP>   Petición ARP; muestra la MAC asociada si hay respuesta.
+  m <mensaje>       Envía un mensaje en broadcast (Ethertype 0x0AA0).
+  p                 Imprime la caché ARP.
+  g                 ARP gratuito (comprobación de IP duplicada).
+  h                 Ayuda.
+  q                 Salir.
+
+
+RESUMEN DE LA IMPLEMENTACIÓN
+----------------------------
+ethernet.py
+  - startEthernetLevel: devuelve -1 si el nivel ya estaba inicializado,
+    obtiene y guarda la MAC de la interfaz, abre la interfaz en modo
+    promiscuo con pcap_open_live, arranca el hilo de recepción (rxThread) y
+    marca el nivel como inicializado. Devuelve -1 si no se puede abrir la
+    interfaz.
+  - stopEthernetLevel: para el hilo de recepción, cierra el handle de pcap y
+    marca el nivel como no inicializado.
+  - registerEthCallback: guarda en un diccionario la función de callback
+    asociada a cada Ethertype.
+  - process_Ethernet_frame: extrae MAC destino, MAC origen y Ethertype;
+    descarta las tramas que no son para la propia MAC ni para broadcast; si
+    hay callback registrado para el Ethertype lo llama con (us, header,
+    payload, MAC origen). La cabecera Ethernet nunca se pasa al nivel
+    superior.
+  - sendEthernetFrame: construye la trama (destino + MAC propia + Ethertype
+    + payload), rellena con ceros hasta 60 bytes si es más pequeña, devuelve
+    -1 si supera 1514 bytes, e inyecta la trama con pcap_inject comprobando
+    su retorno.
+
+ethmsg.py
+  - initEthMsg: registra process_ethMsg_frame con el Ethertype 0x0AA0.
+  - sendEthMsg: codifica el mensaje en ASCII, antepone la longitud en 2
+    bytes en orden de red y lo envía en broadcast. Devuelve el número de
+    bytes transmitidos o None si falla.
+  - process_ethMsg_frame: lee la longitud (data[0:2]) y el mensaje
+    (data[2:]) e imprime:
+      [aaaa/mm/dd hh:mm:ss.uuuuuu] <MAC> (<longitud> bytes): <mensaje>
+    usando el timestamp de la cabecera pcap.
+
+arp.py
+  - initARP: registra process_arp_frame con el Ethertype 0x0806, obtiene y
+    guarda la MAC y la IP de la interfaz y realiza el ARP gratuito (petición
+    por la propia IP). Si alguien contesta, devuelve -1 (IP duplicada).
+  - ARPResolution: si la IP está en caché devuelve la MAC sin enviar nada.
+    Si no, construye la petición y la envía en broadcast; espera respuesta
+    y reintenta hasta un máximo de 3 veces; si no hay respuesta devuelve
+    None. Se comunica con el hilo de recepción mediante las variables
+    globales awaitingResponse, requestedIP y resolvedMAC, protegidas con un
+    Lock (globalLock).
+  - process_arp_frame: comprueba longitud y cabecera común (6 primeros
+    bytes), extrae el opcode y llama a processARPRequest (0x0001) o a
+    processARPReply (0x0002). Con cualquier otro opcode o trama mal formada
+    retorna.
+  - processARPRequest: comprueba que la MAC origen del paquete ARP coincide
+    con la de la trama Ethernet; si la IP destino es la propia, construye
+    la respuesta con createARPReply y la envía en unicast.
+  - processARPReply: mismas comprobaciones; si la IP destino es la propia y
+    la IP origen coincide con requestedIP, guarda la MAC en resolvedMAC,
+    la añade a la caché, pone awaitingResponse a False y requestedIP a None
+    (todo bajo Lock).
+  - createARPRequest / createARPReply: construyen la trama ARP (cabecera
+    común + opcode + MAC/IP origen + MAC/IP destino). En la petición la MAC
+    destino va a ceros.
+  - Caché ARP: ExpiringDict protegido con cacheLock; las entradas caducan a
+    los 10 segundos.
+
+
+CRITERIOS DE EVALUACIÓN
+-----------------------
+Todas las pruebas se han hecho en Mininet (sudo mn --nat) con dos hosts, h1
+(10.0.0.1, MAC 00:00:00:00:00:01) y h2 (10.0.0.2, MAC 00:00:00:00:00:02),
+ejecutando practica2.py en cada uno con --itf h1-eth0 y --itf h2-eth0, y
+capturando el tráfico con Wireshark.
+
+1. Fichero leeme.txt bien explicado
+   REALIZADO. Este archivo incluye autores, descripción de los archivos,
+   resumen de la implementación y el estado de cada criterio.
+
+2. Recibir tramas Ethernet, realizar comprobaciones y llamar correctamente
+   a la función de callback de nivel superior
+   REALIZADO. Validado enviando mensajes (m) y peticiones ARP entre h1 y
+   h2: el nivel superior recibe solo el payload y la MAC origen correctos,
+   y se descartan las tramas que no son para la propia MAC ni broadcast.
+
+3. Enviar tramas Ethernet correctamente
+   REALIZADO. Validado con Wireshark: MAC origen y destino correctas,
+   Ethertype correcto (0x0AA0 y 0x0806) y relleno con ceros hasta 60 bytes
+   (las tramas de nuestro programa miden 60 bytes, a diferencia de las del
+   sistema operativo, que miden 42). Se devuelve error si la trama supera
+   1514 bytes.
+
+4. Imprimir mensajes sobre el protocolo 0x0AA0
+   REALIZADO. Prueba 1: desde h1 se introduce "m <mensaje>" y en h2 aparece
+   impreso con el formato [fecha hora.microsegundos] MAC (longitud bytes):
+   mensaje. En Wireshark la trama va a ff:ff:ff:ff:ff:ff con Ethertype
+   0x0aa0 y los dos primeros bytes del payload son la longitud.
+
+5. Enviar correctamente peticiones ARP
+   REALIZADO. Prueba 2: desde h1 se introduce la IP de h2 y en Wireshark se
+   ve un ARP Request en broadcast con la MAC destino a ceros. Con una IP
+   inexistente se envían 3 peticiones (una por segundo) y se informa de que
+   la dirección no se ha encontrado.
+
+6. Procesar correctamente peticiones ARP recibidas
+   REALIZADO. Validado en h2 (y en h1): al recibir una petición cuya IP
+   destino es la propia, se genera y envía la respuesta; si la IP destino
+   es otra, o la MAC origen del paquete ARP no coincide con la de la trama
+   Ethernet, se ignora.
+
+7. Enviar correctamente respuestas ARP
+   REALIZADO. Validado con Wireshark: para cada petición se ven 2
+   respuestas, la de nuestro programa (60 bytes, unicast) y la del sistema
+   operativo (menor tamaño), con la MAC e IP correctas.
+
+8. Procesar correctamente respuestas ARP
+   REALIZADO. Validado: h1 recibe la respuesta de h2 y muestra
+   00:00:00:00:00:02. Se comprueba que la IP origen coincide con la
+   solicitada, que se actualizan resolvedMAC, awaitingResponse y
+   requestedIP, y que se añade la entrada a la caché. Las respuestas que no
+   corresponden a la IP solicitada se ignoran.
+
+9. Manejo correcto de la caché ARP
+   REALIZADO. Prueba 2: tras resolver la IP de h2, el comando p muestra la
+   entrada IP/MAC en la caché. Al volver a solicitar la misma IP (antes de
+   10 segundos) la respuesta es inmediata y Wireshark no muestra ninguna
+   petición ARP enviada por nuestro programa. Pasados 10 segundos la
+   entrada caduca y se vuelve a preguntar.
+ 
+
+ARP GRATUITO (prueba 2, punto 7, y prueba 3)
+   REALIZADO. Con el comando g, Wireshark muestra tramas "ARP Announcement"
+   en broadcast con IP origen igual a IP destino (la propia). Al arrancar,
+   initARP también lo realiza. Prueba 3: tras cambiar la IP de h2 a
+   10.0.0.1 (la misma que h1), al ejecutar practica2.py en h2 el nivel ARP
+   no se inicializa ("ARP no inicializado") porque h1 contesta al ARP
+   gratuito.
+
+

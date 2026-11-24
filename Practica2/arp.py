@@ -178,6 +178,7 @@ def createARPRequest(ip:int) -> bytes:
     '''
     global myMAC,myIP
     frame = bytes()
+    #El mac son todo 0s porque es una petición ARP y no sabemos la MAC destino. El opcode es 0x0001 para indicar que es una petición
     frame = ARPHeader + struct.pack('!H', 0x0001) + myMAC + struct.pack('!I', myIP) + bytes([0x00]*6) + struct.pack('!I', ip)
     return frame
 
@@ -319,7 +320,6 @@ def ARPResolution(ip:int) -> bytes:
         # Esperamos un tiempo prudencial (ej. 1 segundo) para dar tiempo a que llegue la respuesta
         # y que el hilo de recepción actualice awaitingResponse a False
         time.sleep(1)
-        
         # Comprobar de forma segura si ya se ha recibido respuesta
         with globalLock:
             if not awaitingResponse:
@@ -327,7 +327,9 @@ def ARPResolution(ip:int) -> bytes:
                 break
                 
         intentos += 1
-        
+
+    if(intentos == 3):
+                logging.info("No se ha recibido respuesta tras 3 intentos")
     # 3. Comprobar el resultado final
     with globalLock:
         if not awaitingResponse and resolvedMAC is not None:
