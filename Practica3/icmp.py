@@ -47,7 +47,39 @@ def process_ICMP_message(us,header,data,srcIp):
         Retorno: Ninguno
           
     '''
+    # Comprobamos longitud mínima de cabecera ICMP (8 bytes)
+    if len(data)<8:
+        return
     
+    # Calcular el checksum de ICMP y comprobar si es correcto
+    if chksum(data) != 0:
+        logging.debug("Checksum ICMP incorrecto. Descartando mensaje.")
+        return
+
+    # Extraer campos de la cabecera ICMP
+    icmp_type, icmp_code, icmp_chksum, icmp_id, icmp_seqnum = struct.unpack('!BBHHH', data[:8])
+
+    logging.debug(f"ICMP recibido. Tipo: {icmp_type}, Código: {icmp_code}")
+
+    if icmp_type == ICMP_ECHO_REQUEST_TYPE:
+        sendICMPMessage(data[8:], ICMP_ECHO_REPLY_TYPE, 0, icmp_id, icmp_seqnum, srcIp)
+
+    elif icmp_type == ICMP_ECHO_REPLY_TYPE:
+        clave = srcIp + icmp_id + icmp_seqnum
+        
+        with timeLock:
+            if clave in icmp_send_times:
+                tiempo_envio = icmp_send_times.pop(clave)
+            else:
+                return
+        tiempo_recepcion = header.ts.tv_sec + (header.ts.tv_usec / 1000000.0)
+        rtt = tiempo_recepcion - tiempo_envio
+        
+        print(f"RTT estimado desde {socket.inet_ntoa(struct.pack('!I', srcIp))}: {rtt * 1000:.3f} ms ({rtt:.6f} s)")
+
+    else:
+        return
+
 
 def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
     '''
@@ -78,8 +110,25 @@ def sendICMPMessage(data,type,code,icmp_id,icmp_seqnum,dstIP):
         Retorno: True o False en función de si se ha enviado el mensaje correctamente o no
           
     '''
-  
-    icmp_message = bytes()
+
+    if type != ICMP_ECHO_REPLY_TYPE and type != ICMP_ECHO_REQUEST_TYPE:
+        return False
+
+    header_sin_chksum = struct.pack('!BBHHH', type, code, 0, icmp_id, icmp_seqnum)
+
+    chksum_val = chksum(header_sin_chksum + data)
+
+    #No ponemos el ! en el chksum porque no es Big Endian
+    header_final = (struct.pack('!BB', type, code) + struct.pack('H', chksum_val) + struct.pack('!HH', icmp_id, icmp_seqnum))
+
+    icmp_message = header_final + data
+
+    if type == ICMP_ECHO_REQUEST_TYPE:
+        clave = dstIP + icmp_id + icmp_seqnum
+        with timeLock:     
+            icmp_send_times[clave]= time.time()
+
+    return sendIPDatagram(dstIP, icmp_message, ICMP_PROTO)
    
 def initICMP():
     '''
@@ -91,5 +140,6 @@ def initICMP():
         Argumentos:
             -Ninguno
         Retorno: Ninguno
-          
+        
     '''
+    registerIPProtocol(process_ICMP_message, ICMP_PROTO)
