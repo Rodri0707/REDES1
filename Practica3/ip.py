@@ -122,7 +122,54 @@ def process_IP_datagram(us,header,data,srcMac):
         Retorno: Ninguno
     '''
 
+    if len(data) < IP_MIN_HLEN:
+        return
 
+    version = data[0] >> 4
+    ihl = data[0] & 0x0F
+    ip_header_len = ihl * 4
+
+    if version != 4 or ip_header_len < IP_MIN_HLEN or len(data) < ip_header_len:
+        return
+
+    # Comprobar checksum de la cabecera IP
+    if chksum(data[0:ip_header_len]) != 0:
+        logging.debug("Checksum IP erróneo")
+        return
+
+    tos = data[1]
+    total_length = struct.unpack('!H', data[2:4])[0]
+    ipid = struct.unpack('!H', data[4:6])[0]
+    flags_offset = struct.unpack('!H', data[6:8])[0]
+    ttl = data[8]
+    protocol = data[9]
+    src_ip = struct.unpack('!I', data[12:16])[0]
+    dst_ip = struct.unpack('!I', data[16:20])[0]
+
+    # Extraer banderas DF y MF (bits 14 y 13) y el Offset (13 bits inferiores) usando máscaras
+    df_flag = (flags_offset & 0x4000) >> 14
+    mf_flag = (flags_offset & 0x2000) >> 13
+    offset_bytes = (flags_offset & 0x1FFF) * 8
+
+    # Convertimos las IPs a texto a.b.c.d
+    src_ip_str = socket.inet_ntoa(data[12:16])
+    dst_ip_str = socket.inet_ntoa(data[16:20])
+
+    # Loggear todos los campos pedidos
+    logging.debug(
+        f"IP -> Longitud cabecera: {ip_header_len}, TOS: {tos}, IPID: {ipid}, "
+        f"DF: {df_flag}, MF: {mf_flag}, Offset: {offset_bytes}, TTL: {ttl}, "
+        f"Protocolo: {protocol}, Origen: {src_ip_str}, Destino: {dst_ip_str}"
+    )
+
+    # Si offset != 0 descartamos (no reensamblamos)
+    if offset_bytes != 0:
+        return
+
+    # Si offset == 0 y el protocolo está registrado, pasamos el payload (sin cabecera IP)
+    if protocol in protocols:
+        payload = data[ip_header_len:total_length]
+        protocols[protocol](us, header, payload, src_ip)
 
 
 
@@ -147,6 +194,8 @@ def registerIPProtocol(callback,protocol):
             -protocol: valor del campo protocolo de IP para el cuál se quiere registrar una función de callback.
         Retorno: Ninguno 
     '''
+    global protocols
+    protocols[protocol]= callback
 
 def initIP(interface,opts=None):
     global myIP, MTU, netmask, defaultGW,ipOpts
@@ -167,6 +216,33 @@ def initIP(interface,opts=None):
             -opts: array de bytes con las opciones a nivel IP a incluir en los datagramas o None si no hay opciones a añadir
         Retorno: True o False en función de si se ha inicializado el nivel o no
     '''
+    # Inicializar el nivel ARP
+    if initARP(interface) == -1:
+        return False
+
+    myIP = getIP(interface)
+    MTU = getMTU(interface)
+    netmask = getNetmask(interface)
+    defaultGW = getDefaultGW(interface)
+
+    # Almacenar opciones IP (deben ser múltiplo de 4 bytes y máximo 40 bytes)
+    if opts is not None:
+        if len(opts) > 40:
+            logging.error("Opciones IP superan los 40 bytes máximos.")
+            return False
+        # Añadir padding con ceros si no es múltiplo de 4 bytes
+        resto = len(opts) % 4
+        if resto != 0:
+            opts = opts + bytes([0] * (4 - resto))
+
+    ipOpts = opts
+
+    registerEthCallback(process_IP_datagram, 0x0800)
+
+    IPID = 12
+
+    return True
+
 
 def sendIPDatagram(dstIP,data,protocol):
     global IPID
