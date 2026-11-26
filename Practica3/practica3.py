@@ -22,8 +22,7 @@ import socket
 DST_PORT = 53
 ICMP_ECHO_REQUEST_TYPE = 8
 ICMP_ECHO_REQUEST_CODE = 0
-# TODO: Cambiar ICMP_ID según enunciado
-ICMP_ID = 0
+ICMP_ID = 12
 
 ipRROption = bytes([7,11,4,0,0,0,0,0,0,0,0,0])
 
@@ -68,7 +67,7 @@ if __name__ == "__main__":
 	
 	icmp_data = b'ABCDEFGHIJKL'
 	if args.icmpSize is not None:
-		tam_datos = max(0, args.icmpsize - 8)
+		tam_datos = max(0, args.icmpSize - 8)
 		abecedario = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		cadena_datos = ''
 		for i in range(tam_datos):
