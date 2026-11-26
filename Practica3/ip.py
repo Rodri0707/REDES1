@@ -340,7 +340,7 @@ def sendIPDatagram(dstIP,data,protocol):
         datagrama_final = ip_header + datos_fragmento
         if sendEthernetFrame(datagrama_final, len(datagrama_final), 0x0800, dstMac) != 0:
             return False
-    IPID = (IPID + 1) & 0xFFFF #Hacer el AND no es necesario, pero así nos aseguramos de que el contador se resetea cuando se superan los 4 bytes
+    IPID = IPID + 1
     return True
 
 

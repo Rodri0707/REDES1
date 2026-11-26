@@ -36,7 +36,7 @@ if __name__ == "__main__":
 	parser.add_argument('--debug', dest='debug', default=False, action='store_true',help='Activar Debug messages')
 	parser.add_argument('--addOptions', dest='addOptions', default=False, action='store_true',help='Añadir opciones a los datagranas IP')
 	parser.add_argument('--dataFile',dest='dataFile',default = False,help='Fichero con datos a enviar')
-	#TODO: Opción --icmpsize
+	parser.add_argument('--icmpsize',dest='icmpSize',default = False,help='Longitud del icmp a enviar')
 	args = parser.parse_args()
 
 	if args.debug:
@@ -59,7 +59,7 @@ if __name__ == "__main__":
 		ipOpts = ipRROption
 
 	udp_data = bytes([0,6,1,0,0,1,0,0,0,0,0,0,3,0x77,0x77,0x77,6,0x67,0x6f,0x6f,0x67,0x6c,0x65,3,0x63,0x6f,0x6d,0,0,1,0,1])
-	if args.dataFile:
+	if args.dataFile: 
 		with open(args.dataFile,'r') as f:
 			#Leemos el contenido del fichero
 			data=f.read()
@@ -67,8 +67,14 @@ if __name__ == "__main__":
 			udp_data = data.encode()
 	
 	icmp_data = b'ABCDEFGHIJKL'
-	#TODO: construir mensaje ICMP según opción --icmpsize
-	
+	if args.icmpSize is not None:
+		tam_datos = max(0, args.icmpsize - 8)
+		abecedario = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+		cadena_datos = ''
+		for i in range(tam_datos):
+			cadena_datos = cadena_datos.join(abecedario[i % 26])
+		icmp_data = cadena_datos.encode()
+
 	startEthernetLevel(args.interface)
 	initICMP()
 	initUDP()
@@ -77,8 +83,7 @@ if __name__ == "__main__":
 		sys.exit(-1)
 
 	
-	
-	
+		
 	while True:
 		try:
 			msg = input('\n\t0x16\n\tIntroduzca opcion:\n\t1.Enviar ping\n\t2.Enviar datagrama UDP:')
