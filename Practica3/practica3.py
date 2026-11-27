@@ -23,7 +23,7 @@ DST_PORT = 53
 ICMP_ECHO_REQUEST_TYPE = 8
 ICMP_ECHO_REQUEST_CODE = 0
 # TODO: Cambiar ICMP_ID según enunciado
-ICMP_ID = 0
+ICMP_ID = 12
 
 ipRROption = bytes([7,11,4,0,0,0,0,0,0,0,0,0])
 
@@ -36,7 +36,7 @@ if __name__ == "__main__":
 	parser.add_argument('--debug', dest='debug', default=False, action='store_true',help='Activar Debug messages')
 	parser.add_argument('--addOptions', dest='addOptions', default=False, action='store_true',help='Añadir opciones a los datagranas IP')
 	parser.add_argument('--dataFile',dest='dataFile',default = False,help='Fichero con datos a enviar')
-	parser.add_argument('--icmpsize',dest='icmpSize',default = False,help='Longitud del icmp a enviar')
+	parser.add_argument('--icmpsize', dest='icmpSize', type=int, default=None, help='Longitud del icmp a enviar')
 	args = parser.parse_args()
 
 	if args.debug:
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 		abecedario = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 		cadena_datos = ''
 		for i in range(tam_datos):
-			cadena_datos = cadena_datos.join(abecedario[i % 26])
+			cadena_datos += abecedario[i % 26]
 		icmp_data = cadena_datos.encode()
 
 	startEthernetLevel(args.interface)
