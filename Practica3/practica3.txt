@@ -1,0 +1,60 @@
+EJERCICIO 1
+
+1. sudo mn --nat
+    xterm h1 h2
+2.
+    Ejecutamos en h1 el programa
+    python3 practica3.py --itf h1-eth0 --debug --dstIP 10.0.0.2 
+
+    Ejecutamos en h2 el programa
+    python3 practica3.py --itf h2-eth0 --debug --dstIP 10.0.0.1 
+3.
+    En otra terminal abrimos wireshark: 
+        sudo wireshark
+
+4.
+    Desde h1 enviamos UDP (escribir 2)
+
+5.
+    Desde wireshark veremos que se está enviando un DNS (es este protocolo por como se ha 
+    configurado udp_data en practica3.py)
+
+6.
+    En h2 comprobamos que ha llegado un UDP con sus campos :
+    Len cabecera 20, IP va aumentando empezando por nuestra pareja (12)
+    IPorigen 10.0.0.1 ...
+
+7. 
+    Para mandar UDP con OPtions
+    python3 practica3.py --itf h1-eth0 --debug --dstIP 10.0.0.2 --addOptions
+
+8.  
+    Mandamos un UDP donde los datos vienen de un fichero, en la otra terminal nos llegan los datos (cortados si el tamaño de datos es mayor que MTU)
+    python3 practica3.py --itf h1-eth0 --debug --dstIP 10.0.0.2 --dataFile prueba.data
+
+9. 
+    Cambiamos la mtu de la interfaz emisora. (IMPORTANTE MTU RECEPTORA > EMISORA)
+    ifconfig h1-eth0 mtu 658
+    Y ahora volvemos a mandar el UDP
+    python3 practica3.py --itf h1-eth0 --debug --dstIP 10.0.0.2 --dataFile prueba.data
+
+    Observamos que llegan más paquetes y más pequeños.
+
+EJERCICIO 2
+
+1,2,3,4 son iguales (Solo que en el 4 en vez de 2, se pulsa 1)
+
+5.
+    En whiresark podemos ver que hay un request de h1 a h2, un reply de h2 a h1 y luego hay un
+    tercer ICMP que es reply de 1 a 2 que lo manda el sistema operativo
+
+6 y 7. 
+    Podemos ver el tiempo de respuesta, y este tiempo es más o menos dependiendo
+    de como esté la caché ARP
+
+EJERCICIO 3
+
+Vemos que al hacer un UDP a una ip fuera de la red, el ARP que se hara para sacar la MAC, se hará
+a la ip del deffault gateway (en el caso de la red mininet 10.0.0.3)
+
+EJERCICIO 4
